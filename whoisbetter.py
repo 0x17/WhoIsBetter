@@ -56,7 +56,7 @@ def write_who_is_better(method_selection, res_dict, characteristics_fn = None, o
 
 
 if __name__ == '__main__':
-    #method_selection = ['GA0', 'GA3', 'GA4', 'Gurobi']
-    method_selection = ['GA3', 'Gurobi']
+    method_selection = ['GA0', 'GA3', 'GA4', 'Gurobi']
+    #method_selection = ['GA3', 'Gurobi']
     res = parse_results(method_selection)
     write_who_is_better(method_selection, res, 'characteristics.csv', one_hot=False, binary_classification=False)
