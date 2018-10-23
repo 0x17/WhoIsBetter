@@ -165,7 +165,7 @@ if __name__ == '__main__':
     instances = write_who_is_better(method_selection=method_selection,
                                     res_dict=res,
                                     characteristics_fn='characteristics.csv',
-                                    one_hot=False,
+                                    one_hot=True,
                                     treat_gurobi_better=False,
                                     regression=False,
                                     remove_equal_profits=True)
