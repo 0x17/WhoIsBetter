@@ -21,7 +21,7 @@ def merge_profits(dir_a, dir_b=None):
         spit(ofn, slurp(dir_a + res_fn) + (slurp(dir_b + res_fn) if dir_b is not None else ""))
 
 
-def merge_time_for_bks():
+def merge_time_for_bks(path = '.'):
     def is_last_improv_fn(fn):
         return fn.endswith('_LastImprovementTime.txt') or fn.endswith('_TimeAtLastImprovementTime.txt')
 
@@ -34,9 +34,10 @@ def merge_time_for_bks():
         'GoldenSectionSearchGA': 'GA6',
         'TimeVaryingCapacityRandomKeyGA': 'GA9'
     }
-    time_for_bks_fns = [fn for fn in os.listdir('.') if is_last_improv_fn(fn)]
+    time_for_bks_fns = [fn for fn in os.listdir(path) if is_last_improv_fn(fn)]
     for fn in time_for_bks_fns:
         src = fn
+        if path != '.': src = path + src
         dest = last_improv_fn_mapping[
                    fn.replace('_LastImprovementTime.txt', '').replace('_TimeAtLastImprovementTime.txt',
                                                                       '')] + '_timeforbks.txt'
@@ -47,5 +48,7 @@ def merge_time_for_bks():
 if __name__ == '__main__':
     # merge_profits('j30res/', 'k30res/')
     # merge_profits('j120_1800secs/')
-    merge_profits('k120_1800secs/', 'j120_1800secs/')
-    merge_time_for_bks()
+    #merge_profits('k120_1800secs/', 'j120_1800secs/')
+    #merge_time_for_bks()
+    merge_profits('rgen30_300_5ksched/')
+    #merge_time_for_bks('rgen30_300_5ksched/')

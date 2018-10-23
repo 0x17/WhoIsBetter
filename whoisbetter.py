@@ -1,5 +1,6 @@
 import sys
 import compimpact
+import os
 
 
 def csv_to_dict(fn):
@@ -10,16 +11,18 @@ def csv_to_dict(fn):
 
 
 def parse_results(method_names):
+    has_time_for_bks = lambda method_name: os.path.exists(method_name + '_timeforbks.txt')
     return {method_name: {'results': csv_to_dict(method_name + '_results.txt'),
-                          'timeforbks': csv_to_dict(method_name + '_timeforbks.txt')} for method_name in method_names}
+                          'timeforbks': csv_to_dict(method_name + '_timeforbks.txt') if has_time_for_bks(method_name) else None} for method_name in method_names}
 
 
 def write_who_is_better(method_selection,
                         res_dict,
                         characteristics_fn=None,
-                        one_hot=True,
+                        one_hot=False,
                         treat_gurobi_better=False,
-                        profits=False):
+                        regression=False,
+                        remove_equal_profits=True):
     global path_option
 
     def to_float(l):
@@ -40,7 +43,7 @@ def write_who_is_better(method_selection,
             return res_dict[mn]['results'][instance]
 
         def timetobks(mn=method_name):
-            return res_dict[mn]['timeforbks'][instance]
+            return 0 if res_dict[mn]['timeforbks'] is None else res_dict[mn]['timeforbks'][instance]
 
         best_profit = max(profit(mn) for mn in method_names)
         its_profit = profit()
@@ -56,13 +59,20 @@ def write_who_is_better(method_selection,
         return 1 if its_profit == best_profit and (not other_methods_with_bks_timeforbks or its_timetobks <= min(
             other_methods_with_bks_timeforbks)) else 0
 
-    class_header = ';' + ';'.join(method_selection) if one_hot or profits else ';best_ix'
+    class_header = ';' + ';'.join(method_selection) if one_hot or regression else ';best_ix'
     lines = ['instance;' + char_header + class_header]
 
     instances = [i for i in res_dict[method_names[0]]['results'] if
                  all(i in res_dict[mn]['results'] for mn in method_names[1:]) and all(
-                     i in res_dict[mn]['timeforbks'] for mn in method_names)]
+                     res_dict[mn]['timeforbks'] is None or i in res_dict[mn]['timeforbks'] for mn in method_names)]
     stats = {}
+
+    if remove_equal_profits:
+        def num_methods_best(instance):
+            max_profit = max(res_dict[mn]['results'][instance] for mn in method_selection)
+            return sum(1 for mn in method_selection if res_dict[mn]['results'][instance] == max_profit)
+
+        instances = [ instance for instance in instances if num_methods_best(instance) == 1]
 
     for instance in instances:
         who_is_best_vector_str = []
@@ -71,8 +81,8 @@ def write_who_is_better(method_selection,
             who_is_best_vector_str += [str(v) for v in char_dict[instance]]
         oh_vec = [str(is_best(method_name, instance)) for method_name in method_names]
         profits_vec = [str(res_dict[method_name]['results'][instance]) for method_name in method_names]
-        who_is_best_vector_str += profits_vec if profits else (oh_vec if one_hot else [str(oh_vec.index('1'))])
-        if not one_hot and not profits:
+        who_is_best_vector_str += profits_vec if regression else (oh_vec if one_hot else [str(oh_vec.index('1'))])
+        if not one_hot and not regression:
             k = int(who_is_best_vector_str[-1])
             stats[k] = 1 if k not in stats else stats[k] + 1
         lines.append(f'{instance};' + ';'.join(who_is_best_vector_str))
@@ -82,7 +92,7 @@ def write_who_is_better(method_selection,
     with open(path_option+'whoisbetter.csv', 'w') as fp:
         fp.write(ostr)
 
-    if not one_hot and not profits:
+    if not one_hot and not regression:
         print(stats)
 
     return instances
@@ -131,17 +141,33 @@ if __name__ == '__main__':
     # method_selection = ['GA0', 'GA3', 'Gurobi']
     # instances = write_who_is_better(method_selection, res, 'characteristics.csv', one_hot=False, treat_gurobi_better=False)
 
-    for (a, b), stats in compimpact.comp_measure_combinations(res, method_selection).items():
-        print(f'Competitiveness stats for pair {a}, {b}: {stats}')
+    best_pair_ratio = None
 
-    for (a, b), stats in compimpact.comp_measure_combinations(res, method_selection, compimpact.perf_measurefunc).items():
+    compet_results = compimpact.comp_measure_combinations(res, method_selection)
+    for (a, b), stats in compet_results.items():
+        print(f'Competitiveness stats for pair {a}, {b}: {stats}')
+        if best_pair_ratio is None or stats['ratio'] > best_pair_ratio[1]:
+            best_pair_ratio = ((a,b), stats['ratio'])
+
+    best_pair_impact = None
+
+    impact_results = compimpact.comp_measure_combinations(res, method_selection, compimpact.perf_measurefunc('profit'))
+    for (a, b), stats in impact_results.items():
         print(f'Performance stats for pair {a}, {b}: {stats}')
+        if best_pair_impact is None or stats['potential_impact'] > best_pair_impact[1]:
+            best_pair_impact = ((a,b), stats['potential_impact'])
+
+    print(f'Best pair and ratio {best_pair_ratio} with impact {impact_results[best_pair_ratio[0]]}')
+    print(f'Best pair and impact {best_pair_impact} with ratio {compet_results[best_pair_impact[0]]}')
+
+
 
     instances = write_who_is_better(method_selection=method_selection,
                                     res_dict=res,
                                     characteristics_fn='characteristics.csv',
                                     one_hot=False,
                                     treat_gurobi_better=False,
-                                    profits=False)
+                                    regression=False,
+                                    remove_equal_profits=True)
 
     # write_gaps(method_selection, res, 'prediction.csv', instances)

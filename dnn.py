@@ -27,15 +27,15 @@ def load_train_data(fn, num_ys = 4):
 
 if __name__ == '__main__':
     np.random.seed(23)
-    xs, ys = load_train_data('whoisbetter.csv', 3)
+    xs, ys = load_train_data('combined_j30_upto_120_rgen/whoisbetter.csv', 6)
 
     model_fn = 'trained_model.h5'
 
-    if os.path.isfile(model_fn):
+    if os.path.isfile(model_fn) and False:
         dnn = load_model(model_fn)
     else:
         dnn = build_network(ninputs=len(xs.columns), noutputs=len(ys.columns), sizes=[190,64,32,16], regression=False)
-        dnn.fit(xs, ys, validation_split=0.1, batch_size=10, epochs=1000, verbose=2)
+        dnn.fit(xs, ys, validation_split=0.25, batch_size=10, epochs=1000, verbose=2)
         dnn.save(model_fn)
 
     res = dnn.predict(xs)
