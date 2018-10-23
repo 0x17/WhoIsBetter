@@ -6,9 +6,10 @@ import whoisbetter
 if __name__ == '__main__':
     method_names = sys.argv[1:]
     assert len(method_names) == 2
+    pred_fn = 'predictions.csv'
     path = whoisbetter.path_option = "combined_j30_upto_120_rgen/"
     res_dict = parse_results(method_names)
-    with open(path + 'predictions.csv', 'r') as fp:
+    with open(path + pred_fn, 'r') as fp:
         lines = fp.readlines()
         preds = {line.split(';')[0]: int(float(line.split(';')[1])) for line in lines if len(line) > 0}
         instances = list(preds.keys())
